@@ -1,0 +1,20 @@
+body {
+	background: grey;
+}
+
+#content {
+	background: silver;
+	width: 1024px;
+	min-height: 800px;
+	margin: 0px auto 0px auto;
+	border: 1px solid black;
+}
+
+#menu {
+	background: silver;
+	width: 1024px;
+	margin: 0px auto 0px auto;
+	margin-bottom: 25px;
+	border: 1px solid black;
+	text-align: center;
+}
