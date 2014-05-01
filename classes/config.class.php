@@ -1,20 +1,19 @@
 <?php
-
 class Config {
-	static $array;
+	public static function get($path = null) {
+		if ($path) {
+			$config = $GLOBALS['config'];
+			$path = explode('/', $path);
 
-	public static function read($name) {
-		return self::$array[$name];
+			foreach ($path as $bit) {
+				if (isset($config[$bit])) {
+					$config = $config[$bit];
+				}
+			}
+
+			return $config;
+		}
+
+		return false;
 	}
-
-	public static function write($name, $value) {
-		self::$array[$name] = $value;
-	}
-};
-
-Config::write("db.hostname", "localhost");
-Config::write("db.name", "viatut");
-Config::write("db.username", "root");
-Config::write("db.password", "");
-
-?>
+}

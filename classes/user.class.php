@@ -1,116 +1,136 @@
 <?php
-
-include("connection.class.php");
-include("core.class.php");
-Core::init();
-
 class User {
-	private $db;
+	private $_db,
+			$_data,
+			$_sessionName,
+			$_cookieName,
+			$_isLoggedIn,
+			$_stats;
 
-	// Default variables for character
-	private $hp = 24;
-	private $hp_max = 24;
-	private $force = 1;
-	private $mobility = 1;
-	private $intellect = 1;
+	public function __construct($user = null) {
+		$this->_db = DB::getInstance();
+		$this->_sessionName = Config::get('session/session_name');
+		$this->_cookieName = Config::get('remember/cookie_name');
+		if (!$user) {
+			if (Session::exists($this->_sessionName)) {
+				$user = Session::get($this->_sessionName);
 
-	function __construct() {
-		$this->db = Connection::getInstance();
+				if ($this->find($user)) {
+					$this->_isLoggedIn = true;
+				}
+				else {
+					$this->logout();
+				}
+			}
+		}
+		else {
+			$this->find($user);
+		}
+
+		$stats = $this->_db->get('stats', array("user_id", '=', $this->data()->id));
+		
+		if ($stats->count()) {
+			$this->_stats = $stats->first();
+			return true;
+		}
 	}
 
-	public function getData() {
-		$query = $this->db->prepare("select * from users where id=? limit 1");
-		$query->bindParam(1, $_SESSION['user_id']);
-		$query->execute();
-		return $query->fetch();
+	public function update($fields = array(), $id = null) {
+		if (!$id && $this->isLoggedIn()) {
+			$id = $this->data()->id;
+		}
+
+		if (!$this->_db->update('users', $id, $fields)) {
+			throw new Exception('There was a problem updating');
+		}
 	}
 
-	public function login($user, $password) {
-		$query = $this->db->prepare("select id from users where nick=? and password=? limit 1");
-		$query->bindParam(1, $user);
-		$password = md5($password);
-		$query->bindParam(2, $password);
-		$query->execute();
+	public function delete($id = null) {
+		if (!$id && $this->isLoggedIn()) {
+			$id = $this->data()->id;
+		}
 
-		$data = $query->fetch();
+		if ($this->isLoggedIn() && $this->id == Session::get($this->_sessionName)) {
+			$this->logout();
+		}
 
-		$_SESSION['user_id'] = $data['id'];
+		if (!$this->_db->delete('users', array('id', '=', $id))) {
+			throw new Exception('There was a problem deleting');
+		}		
 	}
 
-	public function isLoggedIn() {
-		return isset($_SESSION['user_id']);
+	public function create($fields = array()) {
+		if (!$this->_db->insert('users', $fields)) {
+			throw new Exception('There was a problem creating an account.');
+		}
+	}
+
+	public function find($user = null) {
+		if ($user) {
+			$field = (is_numeric($user)) ? 'id' : 'username';
+			$data = $this->_db->get('users', array($field, '=', $user));
+			
+			if ($data->count()) {
+				$this->_data = $data->first();
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public function login($username = null, $password = null, $remember = false) {
+		if (!$username && !$password && $this->exists()) {
+			Session::put($this->_sessionName, $this->data()->id);
+		}
+		else {
+			$user = $this->find($username);
+			if ($user) {
+				if ($this->data()->password === Hash::make($password, $this->data()->salt)) {
+					Session::put($this->_sessionName, $this->data()->id);
+					
+					if ($remember) {
+						$hash = Hash::unique();
+						$hashCheck = $this->_db->get('users_session', array('user_id', '=', $this->data()->id));
+					
+						if (!$hashCheck->count()) {
+							$this->_db->insert('users_session', array(
+								'user_id' => $this->data()->id,
+								'hash' => $hash
+							));
+						}
+						else {
+							$hash = $hashCheck->first()->hash;
+						}
+
+						Cookie::put($this->_cookieName, $hash, Config::get('remember/cookie_expiry'));
+					}
+
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public function exists() {
+		return (!empty($this->_data)) ? true : false;
 	}
 
 	public function logout() {
-		unset($_SESSION['user_id']);
+		$this->_db->delete('users_session', array('user_id', '=', $this->_data->id));
+		Session::delete($this->_sessionName);
+		Cookie::delete($this->_cookieName);
 	}
 
-	public function isExists($nick) {
-		$query = $this->db->prepare("select id from users where nick=? limit 1");
-		$query->bindParam(1, $nick);
-		$query->execute();
-
-		$data = $query->fetchColumn();
-		if ($data > 0) {
-			return true;
-		}
-		else return false;
+	public function data() {
+		return $this->_data;
 	}
 
-	public function register($nick, $password, $password2) {
-		if (empty($_SESSION['user_id'])) {
-			if (strlen($nick) >= 3 && strlen($nick) < 24) {
-				if (strlen($password) >= 5) {
-					if ($password == $password2) {
-						$user_exist = $this->isExists($nick);
-
-						if (!$user_exist) {
-							$query = $this->db->prepare("insert into users(nick, password) values(?, ?)");
-							$query->bindParam(1, $nick);
-							$password = md5($password);
-							$query->bindParam(2, $password);
-							$query->execute();
-							echo "<br>Twoje konto zostało zarejestrowane, możesz teraz się zalogować<br>";
-						}
-						else echo "<br>Istnieje już taki użytkownik.<br>";
-					}
-					else echo "Podane hasła różnią się";
-				}
-				else echo "Hasło powinno zawierać minimum 5 znaków";
-			}
-			else echo "Nazwa użytkownika powinna zawierać od 3 do 24 znaków";
-		}
-		else echo "Jesteś zalogowany już na inne konto!";
+	public function stats() {
+		return $this->_stats;
 	}
 
-
-
-	public function addCharacter($name) {
-		if ($this->isLoggedIn()) {
-
-			$query = $this->db->prepare("select id from characters where name=? limit 1");
-			$query->bindParam(1, $name);
-			$query->execute();
-
-			$data = $query->fetchColumn();
-			$is_exist = false;
-			if ($data > 0) {
-				$is_exist = true;
-			}
-
-			if (!$is_exist) {
-				$query = $this->db->prepare("insert into characters(nick, password) values(?, ?)");
-				$query->bindParam(1, $name);
-				$password = md5($password);
-				$query->bindParam(2, $password);
-				$query->execute();
-			}
-			else echo "Istenieje już taka postać";
-
-
-		}
+	public function isLoggedIn() {
+		return $this->_isLoggedIn;
 	}
-};
-
-
-?>
+}

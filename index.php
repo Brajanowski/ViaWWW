@@ -1,8 +1,6 @@
-
 <?php
-include("classes/user.class.php");
+require_once "core/init.php";
 $user = new User();
-
 ?>
 
 <!doctype html>
@@ -18,87 +16,51 @@ $user = new User();
 
 	<body>
 		<div id="menu">
-			<?php
-if (!$user->isLoggedIn()) {
-			?>
-			<a href="index.php">Strona główna</a> |
-			<a href="index.php?site=login">Zaloguj się</a> |
-			<a href="index.php?site=register">Zarejestruj się</a>
+		<?php
+		if ($user->isLoggedIn()) {
+		?>
+		<a href="index.php">Home</a>
+		<a href="?site=work">Work</a>
+		<a href="?site=logout">Log out</a>
 
-			<?php
-			}
-			else {
-			?>
-			<a href="index.php">Strona główna</a> |
-			<a href="index.php?site=character">Postać</a> |
+		<?php
+		}
+		else {
+		?>
 
-			<a href="index.php?site=logout">Wyloguj się</a>
+		<a href="?site=login">Log in</a>
+		<a href="?site=register">Register</a>
 
-			<?php
-			}
-			?>
+		<?php
+		}
+		?>
 		</div>
 
 		<div id="content">
 			<?php
 
-			switch (@$_GET['site']) {
+			switch (@Input::get("site")) {
 
-			case 'login':
-
-			if (!$user->isLoggedIn()) {
-			?>
-
-			<center>
-				<form method="post">
-					<input name="login" type="text" placeholder="Nick" /><br>
-					<input name="password" type="password" placeholder="Hasło" /><br>
-					<input name="submit" type="submit" value="Zaloguj się!" /><br>
-				</form>
-			</center>
-
-			<?php
-
-				if (!empty($_POST['submit'])) {
-					$user->login($_POST['login'], $_POST['password']);
-				}
-			}
-			else {
-				echo "JESTES ZALOGOWANY jako ".$user->getData()['nick']."<br>sesja: ".$_SESSION['user_id'];
-			}
-
+			case "login":
+				require_once "sites/login.php";
 				break;
 
-			case 'register':
-
-			if (!$user->isLoggedIn()) {
-			?>
-			<center>
-				<form method="post">
-					<input name="login" type="text" placeholder="Nick" /><br>
-					<input name="password" type="password" placeholder="Hasło" /><br>
-					<input name="password2" type="password" placeholder="Powtórz hasło" /><br>
-					<input name="submit" type="submit" value="Zarejestruj się!" /><br>
-				</form>
-			</center>
-			<?php
-				if (!empty($_POST['submit'])) {
-					$user->register($_POST['login'], $_POST['password'], $_POST['password2']);
-				}
-			}
-			else {
-				echo "JESTES ZALOGOWANY jako ".$user->getData()['nick']."<br>sesja: ".$_SESSION['user_id'];
-			}
-
+			case "register":
+				require_once "sites/register.php";
 				break;
-			
-			case 'logout':
-				$user->logout();
+
+			case "logout":
+				require_once "sites/logout.php";
+				break;
+
+			case "work":
+				require_once "sites/work.php";
 				break;
 
 			default:
-
+				require_once "sites/home.php";
 				break;
+
 			}
 
 			?>
