@@ -25,13 +25,25 @@ if ($user->isLoggedIn()) {
 		$query = DB::getInstance()->query("UPDATE stats SET work_payment=?, work_id=?, work_end=? WHERE user_id=?",
 										  					array($work_payment, Input::get("work_id"), $work_end, $user->data()->id));
 		
-		Redirect::to("index.php");
+		Redirect::to("index.php?site=work");
 		break;
 
 	case "end":
-		$query = DB::getInstance("UPDATE stats SET work_id=? work_payment=?, work_end=? WHERE user_id=?", array(-1, 0, 0, $user->data()->id));
-		echo $query->count();
-		//Redirect::to("index.php");
+		$query = DB::getInstance()->query("UPDATE stats SET work_id=?, work_payment=?, work_end=? WHERE user_id=?", array(-1, 0, 0, $user->data()->id));
+		Redirect::to("index.php?site=work");
+		break;
+
+	case "getPayment":
+		$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->work_id))->first();
+		if (($user->stats()->work_end - time()) <= 0 && $user->stats()->work_id != -1) {
+			$updated_money = $user->stats()->work_payment + $user->stats()->money;
+			$query = DB::getInstance()->query("UPDATE stats SET work_id=?, work_payment=?, work_end=?, money=? WHERE user_id=?", array(-1, 0, 0, $updated_money, $user->data()->id));
+			Redirect::to("index.php?site=work");
+		}
+		else {
+			Redirect::to("index.php");
+		}
+
 		break;
 
 	default:
@@ -64,9 +76,15 @@ if ($user->isLoggedIn()) {
 		}
 		else {
 			$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->work_id))->first();
-			$time_to_end = round(($user->stats()->work_end - time()) / 60 / 60);
-			echo "You work as: <b>".$work->name."</b>, time to end: ".$time_to_end." h<br>";
-			echo "<a href='?site=work&action=end'>End your work! (You will not get payment if you do this)</a>";
+
+			if (($user->stats()->work_end - time()) <= 0) {
+				echo "<a href='?site=work&action=getPayment'>You finished work! Get payment</a>";
+			}
+			else {
+				$time_to_end = round(($user->stats()->work_end - time()) / 60 / 60);
+				echo "You work as: <b>".$work->name."</b>, time to end: ".$time_to_end." h<br>";
+				echo "<a href='?site=work&action=end'>End your work! (You will not get payment if you do this)</a>";	
+			}
 		}
 
 		break;
