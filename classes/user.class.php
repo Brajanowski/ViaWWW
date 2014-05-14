@@ -27,11 +27,17 @@ class User {
 			$this->find($user);
 		}
 
-		$stats = $this->_db->get('stats', array("user_id", '=', $this->data()->id));
+		if ($this->_data != null) {
+			$stats = $this->_db->get('stats', array("user_id", '=', $this->data()->id));
 		
-		if ($stats->count()) {
-			$this->_stats = $stats->first();
-			return true;
+			if ($stats->count()) {
+				$this->_stats = $stats->first();
+			}
+			else {
+				$this->_db->query("INSERT INTO stats(user_id) VALUES(?)", array($this->data()->id));
+				$stats = $this->_db->get('stats', array("user_id", '=', $this->data()->id));
+				$this->_stats = $stats->first();
+			}
 		}
 	}
 

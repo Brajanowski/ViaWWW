@@ -1,9 +1,13 @@
 <?php
 if ($user->isLoggedIn()) {
+	if ($user->stats()->action_type != 0 && $user->stats()->action_type != 1) {
+		Redirect::to("index.php");
+		exit();
+	}
 	switch (@Input::get("action")) {
 
 	case "go":
-		if ($user->stats()->work_id != -1) {
+		if ($user->stats()->action_id > 0) {
 			Redirect::to("index.php");
 			exit();
 		}
@@ -22,22 +26,22 @@ if ($user->isLoggedIn()) {
 
 		$work_payment = $work->rate * Input::get("work_time");
 		$work_end = time() + Input::get("work_time") * 60 * 60;
-		$query = DB::getInstance()->query("UPDATE stats SET work_payment=?, work_id=?, work_end=? WHERE user_id=?",
-										  					array($work_payment, Input::get("work_id"), $work_end, $user->data()->id));
+		$query = DB::getInstance()->query("UPDATE stats SET work_payment=?, action_id=?, action_end=?, action_type=? WHERE user_id=?",
+										  					array($work_payment, Input::get("work_id"), $work_end, 1, $user->data()->id));
 		
 		Redirect::to("index.php?site=work");
 		break;
 
 	case "end":
-		$query = DB::getInstance()->query("UPDATE stats SET work_id=?, work_payment=?, work_end=? WHERE user_id=?", array(-1, 0, 0, $user->data()->id));
+		$query = DB::getInstance()->query("UPDATE stats SET action_id=?, work_payment=?, action_end=?, action_type=? WHERE user_id=?", array(0, 0, 0, 0, $user->data()->id));
 		Redirect::to("index.php?site=work");
 		break;
 
 	case "getPayment":
 		$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->work_id))->first();
-		if (($user->stats()->work_end - time()) <= 0 && $user->stats()->work_id != -1) {
+		if (($user->stats()->action_end - time()) <= 0 && $user->stats()->action_id >= 0) {
 			$updated_money = $user->stats()->work_payment + $user->stats()->money;
-			$query = DB::getInstance()->query("UPDATE stats SET work_id=?, work_payment=?, work_end=?, money=? WHERE user_id=?", array(-1, 0, 0, $updated_money, $user->data()->id));
+			$query = DB::getInstance()->query("UPDATE stats SET action_id=?, work_payment=?, action_end=?, action_type=?, money=? WHERE user_id=?", array(0, 0, 0, 0, $updated_money, $user->data()->id));
 			Redirect::to("index.php?site=work");
 		}
 		else {
@@ -47,7 +51,7 @@ if ($user->isLoggedIn()) {
 		break;
 
 	default:
-		if ($user->stats()->work_id == -1) {
+		if ($user->stats()->action_id <= 0) {
 			$works = DB::getInstance()->query("SELECT * FROM works")->results();
 
 			echo "<form method='post' action='?site=work&action=go'>";
@@ -75,13 +79,13 @@ if ($user->isLoggedIn()) {
 			echo "</form>";
 		}
 		else {
-			$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->work_id))->first();
+			$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->action_id))->first();
 
-			if (($user->stats()->work_end - time()) <= 0) {
+			if (($user->stats()->action_end - time()) <= 0) {
 				echo "<a href='?site=work&action=getPayment'>You finished work! Get payment</a>";
 			}
 			else {
-				$time_to_end = round(($user->stats()->work_end - time()) / 60 / 60);
+				$time_to_end = round(($user->stats()->action_end - time()) / 60 / 60);
 				echo "You work as: <b>".$work->name."</b>, time to end: ".$time_to_end." h<br>";
 				echo "<a href='?site=work&action=end'>End your work! (You will not get payment if you do this)</a>";	
 			}
