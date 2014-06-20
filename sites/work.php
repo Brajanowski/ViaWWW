@@ -38,7 +38,7 @@ if ($user->isLoggedIn()) {
 		break;
 
 	case "getPayment":
-		$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->work_id))->first();
+		$work = DB::getInstance()->query("SELECT * FROM works WHERE id=?", array($user->stats()->action_id))->first();
 		if (($user->stats()->action_end - time()) <= 0 && $user->stats()->action_id >= 0) {
 			$updated_money = $user->stats()->work_payment + $user->stats()->money;
 			$query = DB::getInstance()->query("UPDATE stats SET action_id=?, work_payment=?, action_end=?, action_type=?, money=? WHERE user_id=?", array(0, 0, 0, 0, $updated_money, $user->data()->id));
