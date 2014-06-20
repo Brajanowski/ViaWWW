@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `stats` (
   `action_type` int(11) NOT NULL DEFAULT '0',
   `lastFight` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 
 --

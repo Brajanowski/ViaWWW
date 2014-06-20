@@ -24,7 +24,7 @@ if ($user->isLoggedIn()) {
 		break;
 
 	case 'getReward':
-		$travel = DB::getInstance()->query("SELECT * FROM travels WHERE id=?", array($user->data()->id))->first();
+		$travel = DB::getInstance()->query("SELECT * FROM travels WHERE id=?", array($user->stats()->action_id))->first();
 		if (($user->stats()->action_end - time()) <= 0 && $user->stats()->action_id != -1) {
 			$exp_update = $user->stats()->exp + round($travel->require_level * $travel->require_level * 1.5);
 
@@ -53,9 +53,8 @@ if ($user->isLoggedIn()) {
 			}	
 		}
 		else {
-			$travel = DB::getInstance()->query("SELECT * FROM travels WHERE id=?", array($user->data()->id))->first();
+			$travel = DB::getInstance()->query("SELECT * FROM travels WHERE id=?", array($user->stats()->action_id))->first();
 			$time_to_end = $user->stats()->action_end - time();
-
 			if (($user->stats()->action_end - time()) <= 0) {
 				echo "<a href='?site=travel&action=getReward'>You back from travel! Get reward</a>";
 			}
